@@ -1,0 +1,11 @@
+{
+  "name": "com.openunityextensions",
+  "version": "0.0.3",
+  "displayName": "Open Unity Extensions",
+  "description": "This is a unity editor toolbar expansion",
+  "unity": "2022.3",
+  "author": {
+    "name": "Nehal Ahmad",
+    "email": "developer.ahmadnehal@gmail.com"
+  }
+}
