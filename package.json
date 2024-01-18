@@ -1,6 +1,6 @@
 {
   "name": "com.openunityextensions",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "displayName": "Open Unity Extensions",
   "description": "This is a unity editor toolbar expansion",
   "unity": "2022.3",

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using UnityEditor.UIElements;
 using UnityEditor.Toolbars;
 using UnityEngine.SceneManagement;
+using System.Linq;
 
 namespace OpenUnityExtensions
 {
@@ -30,7 +31,7 @@ namespace OpenUnityExtensions
         public override VisualElement CreatePanelContent()
         {
             var root = new VisualElement() { name = "Scene Switch Overlay" };
-          
+
 
             root.style.flexDirection = FlexDirection.Row;
             root.style.alignItems = Align.Center;
@@ -38,7 +39,7 @@ namespace OpenUnityExtensions
             root.style.justifyContent = Justify.SpaceBetween;
 
             SceneListDropDown sceneListDropDown = new SceneListDropDown();
-            sceneListDropDown.style.width = 100;
+            sceneListDropDown.style.width = 110;
             sceneListDropDown.style.height = 30;
 
             sceneListDropDown.style.marginRight = 0;
@@ -63,71 +64,79 @@ namespace OpenUnityExtensions
 
         }
 
-       
+
 #endif
     }
 
 
 
     [EditorToolbarElement(id, typeof(SceneView))]
-    class SceneListDropDown : EditorToolbarDropdown
+    class SceneListDropDown : EditorToolbarDropdownToggle
     {
-        private List<string> sceneNames;
+
+        private Dictionary<string, string> sceneViews = new Dictionary<string, string>();
         public const string id = "SceneSwitch";
-        static string dropChoice = null;
+        public static string dropChoice = null;
 
         public SceneListDropDown()
         {
             RefreshSceneList();
-#if UNITY_2022_2_OR_NEWER
-            text = " " + SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
-            tooltip = "Current Scene";
-#elif UNITY_2021_2 || UNITY_2021_3
-            text =  SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
-tooltip = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
-#endif
+
             icon = (Texture2D)EditorGUIUtility.IconContent("d_UnityLogo").image;
 
-            clicked += ShowDropdown;
+            dropdownClicked += ShowDropdown;
+
 
         }
 
         void ShowDropdown()
         {
 
-
-
-
-
             var menu = new GenericMenu();
-            foreach (var name in sceneNames)
+            menu.allowDuplicateNames = true;
+            foreach (var scene in sceneViews)
             {
 
-                menu.AddItem(new GUIContent(name), dropChoice == name, () => { LoadSelectedScene(name); text = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length); });
+                menu.AddItem(new GUIContent($"{AssetDatabase.GUIDToAssetPath(scene.Key).Substring(7, AssetDatabase.GUIDToAssetPath(scene.Key).Length - 7)}"), dropChoice == scene.Key, () =>
+                {
+                    LoadSelectedScene(scene.Key);
+                    text = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
+
+#if UNITY_2022_2_OR_NEWER
+                    text = $"{scene.Value} : {AssetDatabase.GUIDToAssetPath(scene.Key).Substring(7, AssetDatabase.GUIDToAssetPath(scene.Key).Length-7)}";
+#endif
+                    tooltip = $"{scene.Value} : {AssetDatabase.GUIDToAssetPath(scene.Key).Substring(7, AssetDatabase.GUIDToAssetPath(scene.Key).Length - 7)}";
+                    dropChoice = scene.Key;
+                });
+
             }
 
+
+
             menu.ShowAsContext();
+            sceneViews.Clear();
             RefreshSceneList();
         }
 
 
         private void RefreshSceneList()
         {
-            sceneNames = new List<string>();
-            string[] sceneGuids = AssetDatabase.FindAssets("t:Scene");
+
+
+            string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new string[] { "Assets" });
 
             foreach (string sceneGuid in sceneGuids)
             {
                 string scenePath = AssetDatabase.GUIDToAssetPath(sceneGuid);
                 string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
-                sceneNames.Add(sceneName);
+                sceneViews.Add(sceneGuid, sceneName);
+
             }
         }
-        private void LoadSelectedScene(string name)
+        private void LoadSelectedScene(string sceneID)
         {
 
-            string scenePath = AssetDatabase.FindAssets(sceneNames.Find(n => n == name) + " t:Scene")[0];
-            EditorSceneManager.OpenScene(AssetDatabase.GUIDToAssetPath(scenePath));
+            EditorSceneManager.OpenScene(AssetDatabase.GUIDToAssetPath(sceneID));
 
         }
     }
@@ -135,6 +144,7 @@ tooltip = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActive
     [EditorToolbarElement(id, typeof(SceneView))]
     class SceneLocator : EditorToolbarButton
     {
+
 
 
         public const string id = "SceneLocator";
@@ -149,8 +159,8 @@ tooltip = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActive
 
         void OnClick()
         {
-            string scenePath = AssetDatabase.FindAssets(SceneManager.GetActiveScene().name)[0];
-            Object sceneAsset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(scenePath));
+
+            Object sceneAsset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(SceneListDropDown.dropChoice));
             Selection.activeObject = sceneAsset;
             EditorGUIUtility.PingObject(sceneAsset);
         }
