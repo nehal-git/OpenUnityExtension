@@ -78,50 +78,88 @@ namespace OpenUnityExtensions
         public const string id = "SceneSwitch";
         public static string dropChoice = null;
 
+
         public SceneListDropDown()
         {
             RefreshSceneList();
-
             icon = (Texture2D)EditorGUIUtility.IconContent("d_UnityLogo").image;
-
             dropdownClicked += ShowDropdown;
-
-
+            text = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
+            dropChoice = AssetDatabase.GUIDFromAssetPath(SceneManager.GetActiveScene().path).ToString();
+            EditorSceneManager.activeSceneChangedInEditMode += OnSceneChanged;
         }
 
+
+        private void OnSceneChanged(Scene s1, Scene _scene)
+        {
+            // Debug.Log("SceneChanged");
+            text = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
+
+#if UNITY_2022_2_OR_NEWER
+            text = $"{_scene.name} : {_scene.path.Substring(7, _scene.path.Length - 7)}";
+#endif
+            tooltip = $"{_scene.name} : {_scene.path.Substring(7, _scene.path.Length - 7)}";
+            dropChoice = AssetDatabase.GUIDFromAssetPath(_scene.path).ToString();
+            sceneViews.Clear();
+            RefreshSceneList();
+        }
         void ShowDropdown()
         {
-
             var menu = new GenericMenu();
             menu.allowDuplicateNames = true;
             foreach (var scene in sceneViews)
             {
-
                 menu.AddItem(new GUIContent($"{AssetDatabase.GUIDToAssetPath(scene.Key).Substring(7, AssetDatabase.GUIDToAssetPath(scene.Key).Length - 7)}"), dropChoice == scene.Key, () =>
                 {
-                    LoadSelectedScene(scene.Key);
-                    text = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
+                    if (CanChangeScene())
+                    {
+                        LoadSelectedScene(scene.Key);
+                        text = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
 
 #if UNITY_2022_2_OR_NEWER
-                    text = $"{scene.Value} : {AssetDatabase.GUIDToAssetPath(scene.Key).Substring(7, AssetDatabase.GUIDToAssetPath(scene.Key).Length-7)}";
+                        text = $"{scene.Value} : {AssetDatabase.GUIDToAssetPath(scene.Key).Substring(7, AssetDatabase.GUIDToAssetPath(scene.Key).Length - 7)}";
 #endif
-                    tooltip = $"{scene.Value} : {AssetDatabase.GUIDToAssetPath(scene.Key).Substring(7, AssetDatabase.GUIDToAssetPath(scene.Key).Length - 7)}";
-                    dropChoice = scene.Key;
+                        tooltip = $"{scene.Value} : {AssetDatabase.GUIDToAssetPath(scene.Key).Substring(7, AssetDatabase.GUIDToAssetPath(scene.Key).Length - 7)}";
+                        dropChoice = scene.Key;
+                    }
                 });
 
             }
 
-
-
             menu.ShowAsContext();
-            sceneViews.Clear();
-            RefreshSceneList();
         }
 
+        bool CanChangeScene()
+        {
+            bool b = true;
+            if (SceneManager.GetActiveScene().isDirty)
+            {
+                int id = EditorUtility.DisplayDialogComplex("Scenes Have Been Modified",
+                    "Do you want to save the changes you made in the scene: \n" + SceneManager.GetActiveScene().name + " \n\nYour changes will be lost if you don't save them.",
+                    "Save",
+                    "Don't Save",
+                    "Cancel");
+
+                if (id == 0)
+                {
+                    EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
+                    b = true;
+                }
+                else if (id == 1)
+                {
+                    b = true;
+                }
+                else if (id == 2)
+                {
+
+                    b = false;
+                }
+            }
+            return b;
+        }
 
         private void RefreshSceneList()
         {
-
 
             string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new string[] { "Assets" });
 
@@ -144,8 +182,6 @@ namespace OpenUnityExtensions
     [EditorToolbarElement(id, typeof(SceneView))]
     class SceneLocator : EditorToolbarButton
     {
-
-
 
         public const string id = "SceneLocator";
         public SceneLocator()
