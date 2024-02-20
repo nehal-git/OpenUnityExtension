@@ -93,15 +93,24 @@ namespace OpenUnityExtensions
         private void OnSceneChanged(Scene s1, Scene _scene)
         {
             // Debug.Log("SceneChanged");
-            text = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
-
+            try
+            {
+                text = SceneManager.GetActiveScene().name.Substring(0, SceneManager.GetActiveScene().name.Length > 10 ? 10 : SceneManager.GetActiveScene().name.Length);
 #if UNITY_2022_2_OR_NEWER
-            text = $"{_scene.name} : {_scene.path.Substring(7, _scene.path.Length - 7)}";
+                text = $"{_scene.name} : {_scene.path.Substring(7, _scene.path.Length - 7)}";
 #endif
-            tooltip = $"{_scene.name} : {_scene.path.Substring(7, _scene.path.Length - 7)}";
-            dropChoice = AssetDatabase.GUIDFromAssetPath(_scene.path).ToString();
-            sceneViews.Clear();
-            RefreshSceneList();
+                tooltip = $"{_scene.name} : {_scene.path.Substring(7, _scene.path.Length - 7)}";
+                dropChoice = AssetDatabase.GUIDFromAssetPath(_scene.path).ToString();
+                sceneViews.Clear();
+                RefreshSceneList();
+            }
+            catch (System.Exception)
+            {
+
+               
+            }
+
+
         }
         void ShowDropdown()
         {
